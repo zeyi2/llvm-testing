@@ -1,0 +1,50 @@
+name: MinGW UCRT clang plugin
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  plugin:
+    runs-on: windows-2022
+    timeout-minutes: 300
+    steps:
+      - run: git config --global core.autocrlf input
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: llvm/llvm-project
+          ref: 50b42f202c13ad44b29d3074e051d6c76498e087
+          path: llvm-project
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-clang
+            mingw-w64-ucrt-x86_64-lld
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-python
+      - name: Configure and inspect ABI
+        shell: msys2 {0}
+        run: bash scripts/mingw-ucrt.sh configure
+      - name: Build LLVM Support
+        shell: msys2 {0}
+        run: bash scripts/mingw-ucrt.sh support
+      - name: Build host and plugin
+        shell: msys2 {0}
+        run: bash scripts/mingw-ucrt.sh plugin
+      - name: Run plugin tests
+        shell: msys2 {0}
+        run: bash scripts/mingw-ucrt.sh test
+      - name: Save diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mingw-ucrt
+          retention-days: 7
+          path: |
+            logs/
+            build/CMakeCache.txt
+            build/CMakeFiles/CMakeConfigureLog.yaml
+            build/compile_commands.json
