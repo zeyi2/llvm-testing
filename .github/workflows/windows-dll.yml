@@ -1,0 +1,43 @@
+name: Windows LLVM DLL reproduction
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  support:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [cl, clang-cl]
+        source:
+          - label: trunk
+            sha: f796b25647e378a02482ef383f2db45804d8fb72
+          - label: pr-221961
+            sha: 50b42f202c13ad44b29d3074e051d6c76498e087
+    name: ${{ matrix.source.label }} / ${{ matrix.compiler }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: llvm/llvm-project
+          ref: ${{ matrix.source.sha }}
+          path: llvm-project
+      - name: Configure and reproduce
+        shell: pwsh
+        env:
+          REPRO_COMPILER: ${{ matrix.compiler }}
+        run: ./scripts/windows-dll.ps1
+      - name: Save diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dll-${{ matrix.source.label }}-${{ matrix.compiler }}
+          retention-days: 7
+          path: |
+            logs/
+            build/CMakeCache.txt
+            build/CMakeFiles/CMakeConfigureLog.yaml
+            build/compile_commands.json
+            build/include/llvm/Config/llvm-config.h
