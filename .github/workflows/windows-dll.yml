@@ -1,6 +1,15 @@
 name: Windows LLVM DLL reproduction
 on:
   workflow_dispatch:
+    inputs:
+      compilers:
+        description: JSON array of compilers
+        default: '["cl", "clang-cl"]'
+        required: true
+      target:
+        description: Ninja target to reproduce
+        default: LLVMSupport
+        required: true
 permissions:
   contents: read
 jobs:
@@ -10,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [cl, clang-cl]
+        compiler: ${{ fromJSON(inputs.compilers) }}
         source:
           - label: trunk
             sha: f796b25647e378a02482ef383f2db45804d8fb72
@@ -28,6 +37,7 @@ jobs:
         shell: pwsh
         env:
           REPRO_COMPILER: ${{ matrix.compiler }}
+          REPRO_TARGET: ${{ inputs.target }}
         run: ./scripts/windows-dll.ps1
       - name: Save diagnostics
         if: always()

@@ -7,6 +7,8 @@ if (!$vs) { throw "Visual Studio C++ tools not found" }
 Import-Module "$vs/Common7/Tools/Microsoft.VisualStudio.DevShell.dll"
 Enter-VsDevShell -VsInstallPath $vs -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64'
 $compiler = $env:REPRO_COMPILER
+$target = $env:REPRO_TARGET
+if (!$target) { $target = "LLVMSupport" }
 if ($compiler -eq 'clang-cl') {
   $env:PATH = "C:/Program Files/LLVM/bin;$env:PATH"
 }
@@ -27,7 +29,7 @@ $argsCmake = @(
 $argsCmake | Out-File logs/configure-arguments.txt
 & cmake @argsCmake 2>&1 | Tee-Object logs/configure.txt
 if ($LASTEXITCODE -ne 0) { throw "CMake failed: $LASTEXITCODE" }
-& ninja -C build -n LLVMSupport 2>&1 | Tee-Object logs/dry-run.txt
+& ninja -C build -n $target 2>&1 | Tee-Object logs/dry-run.txt
 if ($LASTEXITCODE -ne 0) { throw "Ninja dry run failed" }
-& ninja -C build -j 3 -k 8 -v LLVMSupport 2>&1 | Tee-Object logs/build.txt
-if ($LASTEXITCODE -ne 0) { throw "LLVMSupport failed: $LASTEXITCODE" }
+& ninja -C build -j 3 -k 8 -v $target 2>&1 | Tee-Object logs/build.txt
+if ($LASTEXITCODE -ne 0) { throw "${target} failed: $LASTEXITCODE" }
