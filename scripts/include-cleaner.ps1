@@ -54,9 +54,14 @@ CheckOptions:
 Set-Content "$repro/vendored.h" "#pragma once"
 Set-Content "$repro/main.cpp" "#include `"vendored.h`"`n`nint main() { return 0; }"
 Push-Location $repro
-& "$root/build/bin/clang-tidy.exe" main.cpp -- 2>&1 | Tee-Object "$root/logs/repro.txt"
+$reproOutput = & "$root/build/bin/clang-tidy.exe" main.cpp -- 2>&1 | Out-String
+$reproExit = $LASTEXITCODE
 Pop-Location
-$warned = [bool](Select-String -Path logs/repro.txt -Pattern 'not used directly' -Quiet)
+# Tee-Object creates no file for empty output, which is the expected result
+# with the fix, so always write the log explicitly.
+Set-Content logs/repro.txt "exit code: $reproExit`n$reproOutput"
+Get-Content logs/repro.txt
+$warned = $reproOutput -match 'not used directly'
 
 $summary = @"
 ## $(if ($fixed) { 'patched' } else { 'unpatched' })
