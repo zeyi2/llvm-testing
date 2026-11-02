@@ -1,0 +1,40 @@
+name: misc-include-cleaner IgnoreHeaders on Windows
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: windows-2022
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - name: unpatched
+            fix: false
+          - name: patched
+            fix: true
+    name: ${{ matrix.variant.name }}
+    steps:
+      - run: git config --global core.autocrlf input
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: llvm/llvm-project
+          ref: 93c463319ebcb57e82f0c87c813a9ead536fb952
+          path: llvm-project
+      - name: Build and test
+        shell: pwsh
+        env:
+          APPLY_FIX: ${{ matrix.variant.fix }}
+        run: ./scripts/include-cleaner.ps1
+      - name: Save diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: include-cleaner-${{ matrix.variant.name }}
+          retention-days: 7
+          path: |
+            logs/
+            build/CMakeCache.txt
